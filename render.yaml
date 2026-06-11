@@ -1,0 +1,15 @@
+# Blueprint de Render — crear servicio con "New > Blueprint" apuntando al repo.
+services:
+  - type: web
+    name: wc26-quant-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    autoDeploy: true            # cada git push redespliega (modelos frescos)
+    envVars:
+      - key: SERVER_LIGHT
+        value: "1"
+      - key: API_ACCESS_KEY
+        sync: false             # definir en el dashboard de Render (secreto)
+      - key: SUPABASE_DB_URL
+        sync: false             # connection string de Supabase (secreto)

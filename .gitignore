@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Entornos / secretos
+.env
+.env.*
+!.env.example
+
+# Frontend: vive en su propio repo (Lovable) — no anidar repos
+frontend/
+
+# Datos locales que NO van al deploy
+data/raw/results/results_backup.csv
+data/raw/odds/
+data/processed/bankroll_config.json
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# IDE / SO
+.vscode/
+.idea/
+Thumbs.db

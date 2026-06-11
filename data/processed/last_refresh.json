@@ -1,0 +1,37 @@
+{
+ "refreshed_at": "2026-06-11T14:11:47.294654+00:00",
+ "matches_total": 49477,
+ "matches_played": 49405,
+ "overlay": {
+  "updated": 0,
+  "inserted": 0,
+  "obsolete": 0
+ },
+ "brier_holdout": 0.16248879224937302,
+ "gate_passed": true,
+ "n_group_played": 0,
+ "n_ko_played": 0,
+ "n_sims": 10000,
+ "top5": [
+  {
+   "team": "Brazil",
+   "champion_pct": 9.65
+  },
+  {
+   "team": "Argentina",
+   "champion_pct": 8.59
+  },
+  {
+   "team": "France",
+   "champion_pct": 8.27
+  },
+  {
+   "team": "Portugal",
+   "champion_pct": 5.0
+  },
+  {
+   "team": "Netherlands",
+   "champion_pct": 4.9
+  }
+ ]
+}
