@@ -7,9 +7,9 @@ WORKDIR /app
 
 # Solo las dependencias del API (sin streamlit/plotly/pytest: ahorra ~200MB)
 RUN pip install --no-cache-dir \
-    "duckdb>=1.0" "pandas>=2.0" "numpy>=1.26" "scipy>=1.11" \
-    "scikit-learn>=1.4" "requests>=2.31" "fastapi>=0.115" \
-    "uvicorn>=0.30" "psycopg2-binary>=2.9" "pyarrow>=15.0" "joblib>=1.3"
+    "duckdb>=1.0" "pandas==2.3.3" "numpy==2.4.4" "scipy==1.17.1" \
+    "scikit-learn==1.6.1" "requests>=2.31" "fastapi>=0.115" \
+    "uvicorn>=0.30" "psycopg2-binary>=2.9" "pyarrow>=15.0" "joblib==1.5.3"
 
 COPY config/ config/
 COPY src/ src/
