@@ -16,8 +16,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from app.components.model_store import (load_best_predictor, load_models,
-                                        wc_teams)
+from dashboard.components.model_store import (load_best_predictor, load_models,
+                                             wc_teams)
 from config.settings import (EV_THRESHOLD_MED, KELLY_CAP, KELLY_FRACTION)
 from src.betting.bankroll import fractional_kelly, kelly_stake
 from src.betting.bet_log import add_bet, current_bankroll

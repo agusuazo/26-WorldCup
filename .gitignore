@@ -9,7 +9,8 @@ __pycache__/
 .env.*
 !.env.example
 
-# Frontend: vive en su propio repo (Lovable) — no anidar repos
+# Frontend React (Lovable) — repo independiente, no anidar en este git
+# Ver frontend/wc26-quant-dashboard/ para el código fuente
 frontend/
 
 # Datos locales que NO van al deploy

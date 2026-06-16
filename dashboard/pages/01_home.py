@@ -11,8 +11,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from app.components.model_store import (load_best_predictor,
-                                        load_upcoming_wc_matches)
+from dashboard.components.model_store import (load_best_predictor,
+                                             load_upcoming_wc_matches)
 from config.settings import PROCESSED_DIR
 from src.betting.ev_calculator import classify_ev, expected_value
 from src.betting.odds_parser import remove_vig_multiplicative

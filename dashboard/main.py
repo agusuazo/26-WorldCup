@@ -1,6 +1,6 @@
 """Dashboard principal — Sistema Predictivo Mundial FIFA 2026.
 
-Ejecutar desde la raíz del proyecto: streamlit run app/main.py
+Ejecutar desde la raíz del proyecto: streamlit run dashboard/main.py
 """
 import sys
 from pathlib import Path
@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
 
 import streamlit as st
 
-from app.components.model_store import load_elo_table, load_wc2026
+from dashboard.components.model_store import load_elo_table, load_wc2026
 
 st.set_page_config(page_title="Mundial FIFA 2026 — EV+", page_icon="⚽",
                    layout="wide")

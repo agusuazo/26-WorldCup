@@ -27,7 +27,7 @@ st.title("🗂️ Vista de Bracket — WC 2026 simulado")
 
 @st.cache_data(ttl=3600, show_spinner="Simulando torneo...")
 def get_detail(mode: str, seed: int, conditioned: bool) -> dict:
-    from app.components.model_store import load_best_predictor
+    from dashboard.components.model_store import load_best_predictor
     from src.simulation.monte_carlo import (load_tournament_state,
                                             simulate_tournament_detail)
     predictor = load_best_predictor()

@@ -116,7 +116,7 @@ with tab_fixture:
 
 with tab_free:
     st.caption("Para eliminatorias que aún no existen como filas en el dataset.")
-    from app.components.model_store import wc_teams
+    from dashboard.components.model_store import wc_teams
     teams = wc_teams()
     c1, c2, c3 = st.columns([2, 2, 1])
     fh = c1.selectbox("Local", teams, key="fr_h")

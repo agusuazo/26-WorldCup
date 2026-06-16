@@ -1,43 +1,98 @@
-# Sistema Predictivo — Mundial FIFA 2026 (EV+)
+# WC26 Quant — Sistema Predictivo Mundial FIFA 2026
 
-Sistema cuantitativo de apuestas para el Mundial 2026: estima probabilidades
-reales de partidos internacionales, las compara contra cuotas y detecta valor
-esperado positivo (EV+) con gestión de banca Kelly fraccional.
+Sistema cuantitativo de predicción y apuestas para el Mundial 2026: modelos Elo,
+Poisson y Dixon-Coles ensamblados y calibrados, simulación Monte Carlo del bracket
+oficial, detección de EV+ y gestión de banca Kelly fraccional.
 
-## Estado: Sprint 0 completado ✅
+## Arquitectura
 
-- **Datos:** 49.405 partidos internacionales (1872-2026, dataset martj42) + fixture real WC 2026 en DuckDB.
-- **Modelos:** Elo propio (K por torneo, multiplicador por margen) + modelo logístico de empate + Poisson global.
-- **Validación:** Brier 0.1696 en hold-out 2023-2026 (3.598 partidos) — gate de calidad superado (uniforme = 0.2222, base rates = 0.2120).
-- **Motor de apuestas:** remoción de vig (multiplicativa / potencia / Shin), EV, Kelly 1/8 con cap 5%.
-- **Dashboard:** Streamlit con ranking Elo, grupos oficiales y match predictor.
+```
+Vercel (React/TanStack)  ──X-API-Key──►  Render (FastAPI, Docker)
+                                           ├─ lectura : DuckDB + modelos (horneados)
+                                           └─ escritura: Supabase Postgres (bets, resultados)
 
-## Uso
+Tu PC: re-entrenamiento → scripts/publish.ps1 → git push → redeploy automático
+```
+
+**Repositorios:**
+- Backend (este repo): modelos, API, Streamlit local
+- Frontend: repo independiente de Lovable (`frontend/` — excluido de git)
+
+## Estructura
+
+```
+api/            FastAPI — backend de producción (deployado en Render)
+dashboard/      Streamlit — dashboard local de análisis
+src/            lógica de negocio compartida
+  backtesting/  backtesting de modelos y apuestas
+  betting/      EV, Kelly, bet log, bankroll
+  db/           DuckDB + capa Supabase para deploy
+  ingestion/    pipeline CSV→DuckDB, descarga martj42, updater
+  models/       Elo, Poisson, Dixon-Coles, ensemble, calibración
+  simulation/   Monte Carlo con bracket oficial FIFA R32
+config/         settings.py, wc2026_fixtures.json
+data/
+  db/           mundial.duckdb (horneado en Docker)
+  processed/    modelos .joblib, sim_results.parquet, backtest
+  raw/results/  results.csv + shootouts.csv (martj42)
+scripts/        CLI: ingesta, entrenamiento, simulador, odds, publish
+tests/          43 tests (pytest)
+docs/           DEPLOY.md — runbook completo Supabase + Render + Vercel
+frontend/       repo Lovable (excluido de este git — repo aparte)
+Dockerfile      imagen Docker para Render
+render.yaml     Blueprint de Render (infra como código)
+```
+
+## Uso local
 
 ```bash
 pip install -r requirements.txt
 
-python scripts/run_ingestion.py        # CSV -> Elo -> DuckDB
-python scripts/run_training.py         # entrena + valida Brier + persiste modelos
-python scripts/build_wc2026_fixtures.py  # regenera fixture/grupos WC 2026
+# Ingesta + entrenamiento + simulación
+python scripts/run_ingestion.py
+python scripts/run_training.py
+python scripts/run_simulator.py
 
-streamlit run app/main.py              # dashboard
-pytest tests/ -q                       # tests
+# Dashboard Streamlit
+streamlit run dashboard/main.py
+
+# API FastAPI (para desarrollo)
+uvicorn api.main:app --reload
+
+# Tests
+pytest tests/ -q
 ```
 
-Para actualizar resultados durante el torneo: re-descargar
-`results.csv` desde github.com/martj42/international_results a
-`data/raw/results/` y re-ejecutar ingesta + entrenamiento.
+## Ciclo durante el torneo
 
-## Protocolo de riesgo (obligatorio)
+```powershell
+# Tras cada jornada: recalcula todo localmente y publica al deploy
+.\scripts\publish.ps1
+```
 
-1. **Paper trading** la primera semana (campo `paper=TRUE` en `bet_log`).
-2. Dinero real solo con: Brier hold-out < 0.20 ✅, sin EV+ sistemático en longshots, stakes a 1/8 Kelly.
-3. Mercados outright: vig con método de Shin y umbral EV > 15%.
+Hace: descarga resultados → rebuild Elo → re-entrena modelos → simula Monte Carlo
+condicionado → commit artefactos → push → Render redespliega (~10 min).
 
-## Próximo (Sprint 1, antes de knockouts ~28-jun)
+## Deploy (free tier)
 
-- Dixon-Coles regularizado + calibración multinomial + ensemble.
-- Simulador Monte Carlo del torneo completo (bracket R32 con mapeo oficial de terceros).
-- Página Tournament Simulator + cuotas en vivo (The Odds API).
-- Backtest exprés con cuotas históricas WC 2018/2022.
+Ver [docs/DEPLOY.md](docs/DEPLOY.md) para el runbook completo.
+
+| Capa | Servicio | Coste |
+|---|---|---|
+| Frontend | Vercel | gratis |
+| Backend API | Render (Docker) | gratis |
+| Estado mutable | Supabase Postgres | gratis |
+
+## Modelos
+
+| Modelo | Brier hold-out | Notas |
+|---|---|---|
+| Elo + Poisson + DC (ensemble) | 0.1652 | gate < 0.20 superado |
+| Walk-forward trimestral | 0.1713 | sin leakage temporal |
+| Base rate (uniforme) | 0.2222 | referencia |
+
+## Protocolo de riesgo
+
+1. Paper trading la primera semana (`paper=TRUE` en bet_log).
+2. Dinero real solo con Brier < 0.20 ✅, 1/8 Kelly, cap 5% por apuesta.
+3. Mercados outright: método Shin + umbral EV > 15%.
