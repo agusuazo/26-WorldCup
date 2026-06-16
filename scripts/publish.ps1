@@ -21,7 +21,7 @@ if (Test-Path ".env") {
 }
 
 Write-Host "`n[1/3] Recalculo completo (ingesta + Elo + modelos + simulacion)..." -ForegroundColor Cyan
-python -c "import sys; sys.path.insert(0, '.'); from src.ingestion.updater import refresh_all; s = refresh_all(n_sims=10000); print(f\"Brier: {s['brier_holdout']:.4f} | gate: {'PASA' if s['gate_passed'] else 'NO PASA'} | condicionado a {s['n_group_played']}+{s['n_ko_played']} partidos\")"
+python scripts/_publish_run.py
 if (-not $?) { throw "Recalculo fallido" }
 
 Write-Host "`n[2/3] Commit de artefactos..." -ForegroundColor Cyan
