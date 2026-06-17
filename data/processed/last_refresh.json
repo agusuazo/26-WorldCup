@@ -1,37 +1,37 @@
 {
- "refreshed_at": "2026-06-16T11:11:39.469921+00:00",
+ "refreshed_at": "2026-06-17T14:28:20.190955+00:00",
  "matches_total": 49477,
- "matches_played": 49420,
+ "matches_played": 49422,
  "overlay": {
-  "updated": 3,
+  "updated": 5,
   "inserted": 0,
   "obsolete": 0
  },
- "brier_holdout": 0.16296502688624412,
+ "brier_holdout": 0.16298877948889703,
  "gate_passed": true,
- "n_group_played": 15,
+ "n_group_played": 17,
  "n_ko_played": 0,
  "n_sims": 10000,
  "top5": [
   {
    "team": "Brazil",
+   "champion_pct": 9.07
+  },
+  {
+   "team": "France",
    "champion_pct": 8.99
   },
   {
    "team": "Argentina",
-   "champion_pct": 8.66
-  },
-  {
-   "team": "France",
-   "champion_pct": 7.46
+   "champion_pct": 8.89
   },
   {
    "team": "Netherlands",
-   "champion_pct": 5.49
+   "champion_pct": 5.24
   },
   {
    "team": "Germany",
-   "champion_pct": 5.21
+   "champion_pct": 4.83
   }
  ]
 }
