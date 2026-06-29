@@ -29,9 +29,6 @@ from config.settings import (BRIER_GATE, DB_PATH, EV_THRESHOLD_MED,
                              KELLY_CAP, KELLY_FRACTION, PROCESSED_DIR,
                              WC2026_FIXTURES)
 from src.betting.bankroll import fractional_kelly
-from src.betting.bet_log import (add_bet, clv_summary, current_bankroll,
-                                 delete_bet, get_bets, get_initial_bankroll,
-                                 set_closing_odds, settle_bet, void_bet)
 from src.betting.ev_calculator import classify_ev, expected_value
 from src.betting.odds_parser import overround, remove_vig_multiplicative
 from src.simulation.monte_carlo import (load_tournament_state, run_monte_carlo,
@@ -106,24 +103,6 @@ def _groups() -> dict:
     return json.loads(WC2026_FIXTURES.read_text(encoding="utf-8"))["groups"]
 
 
-def _bet_to_json(r) -> dict:
-    closing = None if pd.isna(r.closing_odds) else float(r.closing_odds)
-    clv = (float(r.odds) / closing - 1.0) if closing and closing > 1 else None
-    return {
-        "betId": int(r.bet_id),
-        "placedAt": pd.Timestamp(r.placed_at).isoformat(),
-        "homeTeam": r.home_team, "awayTeam": r.away_team,
-        "market": r.market,
-        "stake": float(r.stake), "odds": float(r.odds),
-        "closingOdds": closing,
-        "modelProb": float(r.model_prob), "ev": float(r.ev),
-        "kellyFraction": float(r.kelly_fraction),
-        "paper": bool(r.paper), "result": r.result,
-        "profit": None if pd.isna(r.profit) else float(r.profit),
-        "clv": clv,
-    }
-
-
 # ---- Status ----------------------------------------------------------------
 
 @app.get("/api/status")
@@ -141,8 +120,6 @@ def status():
         "gatePassed": float(brier) < BRIER_GATE,
         "groupMatchesPlayed": state["n_group_played"],
         "koMatchesPlayed": state["n_ko_played"],
-        "bankroll": current_bankroll(paper=True),
-        "paperMode": True,
     }
 
 
@@ -355,94 +332,6 @@ def bracket(mode: str = "expected", seed: int = 42, conditioned: bool = True):
     }
     _CACHE[key] = out
     return out
-
-
-# ---- Bets -----------------------------------------------------------------------
-
-@app.get("/api/bets")
-def bets():
-    df = get_bets(paper=None)
-    return [_bet_to_json(r) for r in df.itertuples()]
-
-
-class BetBody(BaseModel):
-    homeTeam: str
-    awayTeam: str = "-"
-    market: str
-    stake: float
-    odds: float
-    modelProb: float
-    ev: float
-    kellyFraction: float = 0.0
-    paper: bool = True
-
-
-@app.post("/api/bets")
-def create_bet(body: BetBody):
-    bet_id = add_bet(body.homeTeam, body.awayTeam, body.market, body.stake,
-                     body.odds, body.modelProb, body.ev, body.kellyFraction,
-                     paper=body.paper)
-    df = get_bets(paper=None)
-    row = df[df["bet_id"] == bet_id].iloc[0]
-    return _bet_to_json(row)
-
-
-class BetPatch(BaseModel):
-    action: str | None = None
-    closingOdds: float | None = None
-
-
-@app.patch("/api/bets/{bet_id}")
-def update_bet(bet_id: int, body: BetPatch):
-    if body.action == "win":
-        settle_bet(bet_id, won=True)
-    elif body.action == "lose":
-        settle_bet(bet_id, won=False)
-    elif body.action == "void":
-        void_bet(bet_id)
-    if body.closingOdds is not None:
-        set_closing_odds(bet_id, body.closingOdds)
-    df = get_bets(paper=None)
-    rows = df[df["bet_id"] == bet_id]
-    if rows.empty:
-        raise HTTPException(404, "bet no encontrada")
-    return _bet_to_json(rows.iloc[0])
-
-
-@app.delete("/api/bets/{bet_id}")
-def remove_bet(bet_id: int):
-    delete_bet(bet_id)
-    return {"ok": True}
-
-
-# ---- Bankroll ----------------------------------------------------------------------
-
-@app.get("/api/bankroll")
-def bankroll():
-    from src.backtesting.metrics import summarize
-    initial = get_initial_bankroll()
-    df = get_bets(paper=True)
-    settled = df[df["result"].isin(["win", "lose"])]
-    current = current_bankroll(paper=True)
-    if settled.empty:
-        return {"current": current, "initial": initial, "netProfit": 0.0,
-                "roi": 0.0, "winRate": 0.0, "profitFactor": 0.0,
-                "maxDrawdown": 0.0, "equityCurve": [initial], "clv": None}
-    s = summarize(settled, initial)
-    eq = np.concatenate([[initial], initial + np.cumsum(
-        settled.sort_values("placed_at")["profit"].to_numpy())])
-    clv = clv_summary(df)
-    return {
-        "current": current, "initial": initial,
-        "netProfit": s["net_profit"], "roi": s["roi"],
-        "winRate": s["win_rate"],
-        "profitFactor": 0.0 if s["profit_factor"] == float("inf") else s["profit_factor"],
-        "maxDrawdown": s["max_drawdown"],
-        "equityCurve": [float(v) for v in eq],
-        "clv": None if clv is None else {
-            "avg": clv["avg_clv"], "beatClosePct": clv["pct_beat_close"],
-            "n": clv["n_with_clv"]},
-    }
 
 
 # ---- Backtest ----------------------------------------------------------------------

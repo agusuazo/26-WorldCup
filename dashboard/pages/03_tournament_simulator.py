@@ -22,9 +22,35 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from config.settings import PROCESSED_DIR
+from dashboard.components.styles import inject_global_css, info_box
 
 st.set_page_config(page_title="Tournament Simulator", page_icon="🏆", layout="wide")
+inject_global_css()
 st.title("🏆 Tournament Simulator — Mundial FIFA 2026")
+
+with st.expander("ℹ️ Cómo leer esta página", expanded=False):
+    info_box("""
+    <b>Simulación completa del Mundial usando estadística.</b><br><br>
+    <ul>
+      <li><span class="glossary-term">Monte Carlo (10.000 simulaciones):</span>
+          Simulamos el torneo 10.000 veces sorteando resultados aleatorios según las probabilidades
+          del modelo. Contamos cuántas veces gana cada equipo → eso es su probabilidad de campeón.</li>
+      <li><span class="glossary-term">Vista acumulada:</span>
+          Cada celda muestra la probabilidad de <b>llegar al menos hasta esa ronda</b>.
+          Un equipo con 8% de campeón y 15% de finalista significa: 8% ganó la final, 7% llegó pero perdió la final.</li>
+      <li><span class="glossary-term">Vista exclusiva:</span>
+          Cada celda muestra la probabilidad de que el torneo del equipo <b>termine exactamente en esa ronda</b>.
+          Cada fila suma 100%.</li>
+      <li><span class="glossary-term">Condicionar a resultados reales:</span>
+          Los partidos ya jugados quedan fijos. Solo se simulan los que faltan.</li>
+      <li><span class="glossary-term">Cuotas outright:</span>
+          Cuota para que un equipo gane el torneo completo (ej: Argentina 5.00 = si apostás $1, ganás $5).
+          Pegá tus cuotas en el panel lateral para ver si el modelo detecta valor.</li>
+      <li><span class="glossary-term">EV outright:</span>
+          Valor esperado en el mercado de campeón. El umbral es >15% (más alto que en partidos individuales
+          porque hay más incertidumbre acumulada en 7 rondas).</li>
+    </ul>
+    """)
 
 # ---- Carga de resultados (o ejecución en demanda) ----------------------
 
@@ -60,7 +86,8 @@ with st.sidebar:
     st.header("Configuracion")
     n_sims = st.select_slider("Simulaciones",
                                options=[1_000, 5_000, 10_000, 25_000, 50_000],
-                               value=10_000)
+                               value=10_000,
+                               help="Más simulaciones = resultados más estables, pero tarda más")
     seed = st.number_input("Semilla aleatoria", value=42, step=1)
     conditioned = st.toggle("Condicionar a resultados reales", value=True,
                             help="Los partidos ya jugados del torneo quedan "
@@ -73,7 +100,7 @@ with st.sidebar:
     run_btn = st.button("Ejecutar simulacion", type="primary")
     st.divider()
     st.subheader("Cuotas outright (campeón)")
-    st.caption("Pega las cuotas decimales de tu casa de apuestas (una por equipo)")
+    st.caption("Pegá las cuotas decimales de tu casa de apuesta para detectar valor (una por línea)")
     odds_input = st.text_area("Equipo: cuota  (ej. Brazil: 7.50)", height=200,
                                placeholder="Brazil: 7.50\nArgentina: 6.00\nFrance: 5.50\n...")
     st.divider()

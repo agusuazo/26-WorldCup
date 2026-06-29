@@ -17,9 +17,34 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from config.settings import PROCESSED_DIR
+from dashboard.components.styles import inject_global_css, info_box
 
 st.set_page_config(page_title="Backtesting", page_icon="📊", layout="wide")
-st.title("📊 Backtesting — Calidad del Modelo")
+inject_global_css()
+st.title("📊 Calidad del Modelo")
+
+with st.expander("ℹ️ Cómo leer esta página", expanded=False):
+    info_box("""
+    <b>¿Qué tan bueno es el modelo?</b> Esta página muestra métricas de calidad estadística evaluadas
+    sobre miles de partidos históricos que el modelo <b>nunca vio durante el entrenamiento</b>.<br><br>
+    <ul>
+      <li><span class="glossary-term">Brier Score:</span>
+          Mide la precisión de las probabilidades predichas. Escala de 0 (perfecto) a 1 (peor posible).
+          <b>0.222</b> es la nota de "adivinar al azar" (decir siempre 33%/33%/33%).
+          Nuestro modelo está en <b>~0.163</b>, una mejora significativa sobre el azar.</li>
+      <li><span class="glossary-term">Baseline uniforme (0.222):</span>
+          Referencia: si siempre predijeras exactamente 1/3 de probabilidad para cada resultado,
+          obtendrías Brier = 0.222. Cualquier modelo útil debe estar por debajo de ese valor.</li>
+      <li><span class="glossary-term">Log Loss:</span>
+          Otra métrica de calidad, más sensible a errores con alta confianza. Menor = mejor.</li>
+      <li><span class="glossary-term">Curva de calibración:</span>
+          Verifica que las probabilidades sean "reales". Si el modelo dice 70% de victoria local,
+          ¿realmente ganó el local el 70% de las veces? Una curva pegada a la diagonal diagonal = modelo bien calibrado.</li>
+      <li><span class="glossary-term">Hold-out:</span>
+          Conjunto de partidos (2023–2025) que se guardaron <b>sin usar</b> para entrenar el modelo.
+          Evaluar sobre hold-out garantiza que no estamos midiendo memoria sino predicción real.</li>
+    </ul>
+    """)
 
 # ---- Carga de resultados precomputados ---------------------------------
 
@@ -113,14 +138,14 @@ if "summary" in data and not data["summary"].empty:
                 f"{row.get('start', '?')} → {row.get('end', '?')}")
 
     if brier < 0.220:
-        st.success(f"Brier {brier:.4f} — por debajo del umbral de calidad (0.220). "
-                   "El modelo es apto para uso real.")
+        st.success(f"✅ Brier {brier:.4f} — por debajo del umbral de calidad (0.220). "
+                   "El modelo supera significativamente la predicción al azar.")
     elif brier < 0.235:
-        st.warning(f"Brier {brier:.4f} — dentro del rango aceptable pero mejora posible. "
-                   "Usar con Kelly conservador (1/8 fracción).")
+        st.warning(f"⚠️ Brier {brier:.4f} — dentro del rango aceptable pero mejorable. "
+                   "El modelo predice mejor que el azar pero con margen ajustado.")
     else:
-        st.error(f"Brier {brier:.4f} — por encima del umbral de seguridad (0.235). "
-                 "No apostar dinero real hasta mejorar el modelo.")
+        st.error(f"❌ Brier {brier:.4f} — por encima del umbral de calidad (0.235). "
+                 "El modelo necesita mejoras antes de ser confiable para predicciones.")
 else:
     st.info("No hay resultados de backtest. Ejecuta `python scripts/run_backtest.py` "
             "o pulsa 'Recalcular' en el panel lateral.")
@@ -180,30 +205,28 @@ with tab_cal:
 
 with tab_about:
     st.markdown("""
-    ### Interpretación del Brier Score multiclase
+    ### Interpretación del Brier Score
 
-    El **Brier Score** mide la precisión probabilística:
+    El **Brier Score** mide qué tan precisas son las probabilidades predichas:
     - **0.0**: predicciones perfectas (imposible en la práctica)
-    - **0.2222**: baseline uniforme (1/3, 1/3, 1/3 para todos los partidos)
+    - **0.163**: nuestro modelo actual (hold-out 2023-2025)
+    - **0.215 – 0.220**: rango de modelos estadísticos bien calibrados
+    - **0.222**: baseline uniforme — adivinar siempre 1/3 para cada resultado
     - **0.235**: modelo Elo básico típico
-    - **0.215 - 0.220**: rango de modelos bien calibrados con Dixon-Coles + ensemble
-    - **1.0**: worst case (100% de confianza siempre errónea)
+    - **1.0**: peor caso — 100% de confianza siempre equivocada
 
-    **Fórmula:** `Brier = mean(sum((p_i - y_i)^2)) / 3`
+    **Fórmula:** `Brier = media(suma((p_i − y_i)²)) / 3`
+    donde `p_i` es la probabilidad predicha e `y_i` es el resultado real (1 o 0).
 
-    ### Protocolo paper trading
+    ### Curva de calibración
 
-    La primera semana del torneo opera con `paper=TRUE` en el bet_log.
-    Requisitos para pasar a dinero real:
-    1. Brier hold-out < **0.220**
-    2. Sin EV+ sistemático en longshots (>7.0) en paper trading
-    3. Máximo **1/8 Kelly** las primeras 2 semanas
+    Un modelo bien calibrado tiene su curva pegada a la diagonal.
+    Si predecimos 60%, queremos que el local gane realmente el 60% de esas veces.
+    El tamaño de cada punto indica cuántas muestras hay en ese rango de probabilidades.
 
-    ### Backtest con cuotas (Sprint 2)
+    ### ¿Por qué evaluar en hold-out?
 
-    Actualmente solo se evalúa calidad probabilística (Brier/LogLoss).
-    El backtest con cuotas reales (ROI, drawdown, Sharpe) requiere un
-    dataset de cuotas históricas de torneos internacionales —
-    disponible en el script `run_backtest.py` con `--mode bets` una vez
-    que se haya integrado el dataset de odds.
+    Para evitar "trampa": si evaluáramos en los mismos datos con los que se entrenó el modelo,
+    mediríamos memoria en vez de predicción real. El hold-out (2023-2025) es un conjunto
+    de partidos que el modelo nunca procesó durante el aprendizaje.
     """)

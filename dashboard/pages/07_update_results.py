@@ -21,12 +21,34 @@ import pandas as pd
 import streamlit as st
 
 from config.settings import DB_PATH
+from dashboard.components.styles import inject_global_css, info_box
 from src.ingestion.updater import (delete_manual_result, download_latest_results,
                                    get_last_refresh, get_manual_results,
                                    refresh_all, save_manual_result)
 
 st.set_page_config(page_title="Actualizar Datos", page_icon="🔄", layout="wide")
+inject_global_css()
 st.title("🔄 Actualizar Datos del Torneo")
+
+with st.expander("ℹ️ Cómo funciona la actualización", expanded=False):
+    info_box("""
+    <b>Esta página mantiene el sistema al día con los resultados del torneo.</b><br><br>
+    <ul>
+      <li><span class="glossary-term">Descargar dataset (GitHub):</span>
+          Descarga los resultados más recientes desde una fuente pública de datos históricos de fútbol.
+          Puede tardar horas o días en actualizarse tras cada jornada.</li>
+      <li><span class="glossary-term">Resultado manual:</span>
+          Para ingresar un resultado de forma inmediata sin esperar la actualización del dataset.
+          Útil justo después de que termina un partido.</li>
+      <li><span class="glossary-term">Recalcular todo:</span>
+          Proceso completo en 3 fases: (1) Ingesta de datos + actualización de ratings Elo,
+          (2) Re-entrenamiento de los modelos estadísticos, (3) Nueva simulación Monte Carlo
+          condicionada a los resultados reales del torneo. Tarda 2-4 minutos.</li>
+      <li><span class="glossary-term">Brier gate:</span>
+          Verificación automática de calidad: si el Brier Score sube por encima de 0.220
+          tras el re-entrenamiento, se muestra una advertencia.</li>
+    </ul>
+    """)
 
 # ---- Estado actual --------------------------------------------------------
 last = get_last_refresh()

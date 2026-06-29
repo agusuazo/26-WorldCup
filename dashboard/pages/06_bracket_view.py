@@ -20,8 +20,32 @@ if str(ROOT) not in sys.path:
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.styles import inject_global_css, info_box
+
 st.set_page_config(page_title="Vista de Bracket", page_icon="🗂️", layout="wide")
+inject_global_css()
 st.title("🗂️ Vista de Bracket — WC 2026 simulado")
+
+with st.expander("ℹ️ Cómo leer esta página", expanded=False):
+    info_box("""
+    <b>Visualización de un torneo completo simulado.</b><br><br>
+    <ul>
+      <li><span class="glossary-term">Escenario más probable:</span>
+          En cada cruce avanza el equipo que el modelo considera favorito. Es una trayectoria
+          <b>ilustrativa</b> — no significa que sea lo que va a pasar, sino el camino más lógico
+          según las probabilidades. Las chances reales por ronda están en Tournament Simulator.</li>
+      <li><span class="glossary-term">Simulación aleatoria:</span>
+          Una sola "tirada" del torneo donde los resultados se sortean según las probabilidades.
+          Hacé clic en "Re-simular" para ver otra posible versión del Mundial.</li>
+      <li><span class="glossary-term">📌 Resultado real:</span>
+          Los partidos marcados con este ícono ya se jugaron y se muestra el resultado real,
+          no simulado.</li>
+      <li><span class="glossary-term">✅ Clasifica:</span> Equipo que avanza (1° o 2° del grupo).</li>
+      <li><span class="glossary-term">3️⃣ Mejor tercero:</span>
+          Equipo que terminó 3° en su grupo pero clasifica entre los 8 mejores terceros del torneo.</li>
+      <li><span class="glossary-term">❌ Eliminado:</span> Equipo que no avanza de la fase de grupos.</li>
+    </ul>
+    """)
 
 # ---- Simulación cacheada ------------------------------------------------
 
@@ -65,8 +89,8 @@ with st.sidebar:
 
 if mode == "expected":
     st.info("**Escenario más probable**: en cada cruce avanza el favorito del modelo. "
-            "Es una trayectoria ilustrativa, no la predicción agregada — "
-            "las probabilidades reales por ronda están en Tournament Simulator.")
+            "Es una trayectoria ilustrativa — las probabilidades reales por ronda están "
+            "en Tournament Simulator.")
 
 # ---- Fase de grupos -------------------------------------------------------
 st.subheader("Fase de grupos — clasificación final")
@@ -102,8 +126,9 @@ st.caption("✅ clasifica directo (1° y 2°) · 3️⃣ clasifica entre los 8 m
 
 st.divider()
 
-# ---- Llaves ---------------------------------------------------------------
+# ---- Llaves por tabs (mobile-friendly) ------------------------------------
 st.subheader("Llaves de eliminación directa")
+st.caption("Navegá entre rondas con las pestañas. 📌 = resultado real ya jugado.")
 
 ROUND_LABELS = [("r32", "Ronda de 32"), ("r16", "Octavos"), ("qf", "Cuartos"),
                 ("sf", "Semifinal"), ("final", "Final")]
@@ -111,8 +136,7 @@ ROUND_LABELS = [("r32", "Ronda de 32"), ("r16", "Octavos"), ("qf", "Cuartos"),
 
 def match_html(a: str, b: str, w: str, highlight: str | None,
                is_real: bool = False) -> str:
-    """Bloque HTML de un cruce; ganador en negrita, resaltado si participa,
-    📌 si es un resultado real (no simulado)."""
+    """Bloque HTML de un cruce; ganador en negrita, resaltado si participa."""
     involved = highlight in (a, b) if highlight else False
     bg = "#fff3cd" if involved else "#f8f9fa"
     border = "#e0a800" if involved else "#dee2e6"
@@ -125,37 +149,48 @@ def match_html(a: str, b: str, w: str, highlight: str | None,
         color = "#1a7f37" if is_w else "#555"
         icon = " ✓" if is_w else ""
         return (f"<div style='font-weight:{weight};color:{color};"
-                f"font-size:0.82rem;line-height:1.5'>{t}{icon}</div>")
+                f"font-size:0.85rem;line-height:1.6'>{t}{icon}</div>")
 
     return (f"<div style='background:{bg};border:1px solid {border};"
-            f"border-radius:6px;padding:6px 8px;margin-bottom:8px'>"
+            f"border-radius:6px;padding:8px 10px;margin-bottom:8px'>"
             f"{line(a)}{line(b)}{pin}</div>")
 
 
-cols = st.columns([3, 3, 3, 3, 3, 2])
-for col, (rname, rlabel) in zip(cols, ROUND_LABELS):
-    with col:
-        st.markdown(f"**{rlabel}**")
-        html = "".join(
-            match_html(a, b, w, highlight,
-                       is_real=frozenset((a, b)) in played_pairs)
-            for a, b, w in detail["rounds"][rname])
-        st.markdown(html, unsafe_allow_html=True)
+# Tabs para cada ronda — caben perfectamente en mobile
+tab_labels = [rlabel for _, rlabel in ROUND_LABELS] + ["🏆 Campeón"]
+tabs = st.tabs(tab_labels)
 
-with cols[5]:
-    st.markdown("**🏆 Campeón**")
+for tab, (rname, rlabel) in zip(tabs[:-1], ROUND_LABELS):
+    with tab:
+        matches = detail["rounds"][rname]
+        if not matches:
+            st.caption("Sin cruces en esta ronda todavía.")
+            continue
+        # En mobile mostramos en 1 col; en desktop usamos 2 cols para aprovechar espacio
+        cols = st.columns(min(2, len(matches)))
+        for idx, (a, b, w) in enumerate(matches):
+            is_real = frozenset((a, b)) in played_pairs
+            with cols[idx % len(cols)]:
+                st.markdown(match_html(a, b, w, highlight, is_real=is_real),
+                            unsafe_allow_html=True)
+
+with tabs[-1]:
+    champion = detail["champion"]
+    involved = highlight == champion if highlight else False
+    bg = "#d4edda" if not involved else "#fff3cd"
+    border = "#1a7f37" if not involved else "#e0a800"
     st.markdown(
-        f"<div style='background:#d4edda;border:2px solid #1a7f37;"
-        f"border-radius:8px;padding:14px 10px;text-align:center;"
-        f"font-weight:700;font-size:1.05rem;color:#155724'>"
-        f"{detail['champion']}</div>", unsafe_allow_html=True)
+        f"<div style='background:{bg};border:2px solid {border};"
+        f"border-radius:8px;padding:20px 16px;text-align:center;"
+        f"font-weight:700;font-size:1.2rem;color:#155724;margin-top:8px'>"
+        f"🏆 {champion}</div>", unsafe_allow_html=True)
+    st.caption("Campeón según este escenario simulado.")
 
 # ---- Camino del equipo resaltado -------------------------------------------
 if highlight:
     st.divider()
     st.subheader(f"Camino de {highlight}")
 
-    # Posición en su grupo
     path_parts = []
     for g_name, g in detail["groups"].items():
         teams_in_group = [t for t, *_ in g["standings"]]
