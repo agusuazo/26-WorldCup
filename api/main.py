@@ -93,10 +93,16 @@ def _load_models():
 
 _load_models()
 
-# En modo remoto (Supabase), garantizar el esquema de tablas mutables al boot
+# En modo remoto (Supabase), garantizar el esquema de tablas mutables al boot.
+# No debe bloquear el arranque del server (Render mide el bind del puerto):
+# si Supabase está inalcanzable, seguimos arrancando y que falle en la request.
 from src.db import remote as _remote
 if _remote.is_remote():
-    _remote.ensure_schema()
+    try:
+        _remote.ensure_schema()
+    except Exception as exc:  # noqa: BLE001
+        print(f"[startup] ensure_schema() failed, continuing without it: {exc}",
+              file=sys.stderr)
 
 
 def _groups() -> dict:

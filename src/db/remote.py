@@ -30,7 +30,7 @@ def is_remote() -> bool:
 
 def get_conn():
     import psycopg2
-    return psycopg2.connect(db_url())
+    return psycopg2.connect(db_url(), connect_timeout=5)
 
 
 def ensure_schema() -> None:
