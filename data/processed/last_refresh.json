@@ -1,13 +1,13 @@
 {
- "refreshed_at": "2026-06-30T12:00:46.175323+00:00",
+ "refreshed_at": "2026-07-01T10:32:40.208780+00:00",
  "matches_total": 49494,
  "matches_played": 49481,
  "overlay": {
   "updated": 0,
   "inserted": 0,
-  "obsolete": 1
+  "obsolete": 8
  },
- "brier_holdout": 0.16313454391260235,
+ "brier_holdout": 0.16313454391260462,
  "gate_passed": true,
  "n_group_played": 72,
  "n_ko_played": 4,
